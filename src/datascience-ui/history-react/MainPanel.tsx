@@ -10,6 +10,7 @@ import { CellMatcher } from '../../client/datascience/cellMatcher';
 import { generateMarkdownFromCodeLines } from '../../client/datascience/common';
 import { HistoryMessages, IHistoryMapping } from '../../client/datascience/historyTypes';
 import { CellState, ICell, IHistoryInfo } from '../../client/datascience/types';
+import { noop } from '../../test/core';
 import { ErrorBoundary } from '../react-common/errorBoundary';
 import { getLocString } from '../react-common/locReactSide';
 import { IMessageHandler, PostOffice } from '../react-common/postOffice';
@@ -36,6 +37,8 @@ export class MainPanel extends React.Component<IMainPanelProps, IMainPanelState>
     private renderCount = 0;
     private sentStartup = false;
     private postOffice: PostOffice | undefined;
+    private editCellRef: Cell | null = null;
+    private mainPanel: HTMLDivElement | null = null;
 
     // tslint:disable-next-line:max-func-body-length
     constructor(props: IMainPanelProps, state: IMainPanelState) {
@@ -79,7 +82,7 @@ export class MainPanel extends React.Component<IMainPanelProps, IMainPanelState>
         const progressBar = this.state.busy && !this.props.testMode ? <Progress /> : undefined;
 
         return (
-            <div className='main-panel'>
+            <div className='main-panel' ref={this.updateSelf}>
                 <PostOffice messageHandlers={[this]} ref={this.updatePostOffice} />
                 <MenuBar baseTheme={this.props.baseTheme} stylePosition='top-fixed'>
                     {this.renderExtraButtons()}
@@ -175,11 +178,52 @@ export class MainPanel extends React.Component<IMainPanelProps, IMainPanelState>
                 this.updateSettings(payload);
                 break;
 
+            case HistoryMessages.Activate:
+                this.activate();
+                break;
+
             default:
                 break;
         }
 
         return false;
+    }
+
+    // private addDebugMessageCell(message: string) {
+    //     const cell: ICell = {
+    //         id: '0',
+    //         file: '',
+    //         line: 0,
+    //         state: CellState.finished,
+    //         data: {
+    //             cell_type: 'sys_info',
+    //             version: '0.0.0.0',
+    //             notebook_version: '0',
+    //             path: '',
+    //             message: message,
+    //             connection: '',
+    //             source: '',
+    //             metadata: {}
+    //         }
+    //     };
+    //     this.addCell(cell);
+    // }
+
+    private activate() {
+        // Make sure the input cell gets focus
+        if (getSettings && getSettings().allowInput) {
+            // Delay this so that we make sure the outer frame has focus first.
+            setTimeout(() => {
+                // First we have to give ourselves focus (so that focus actually ends up in the code cell)
+                if (this.mainPanel) {
+                    this.mainPanel.focus({preventScroll: true});
+                }
+
+                if (this.editCellRef) {
+                    this.editCellRef.giveFocus();
+                }
+            }, 100);
+        }
     }
 
     // tslint:disable-next-line:no-any
@@ -238,10 +282,15 @@ export class MainPanel extends React.Component<IMainPanelProps, IMainPanelState>
                     codeTheme={this.props.codeTheme}
                     showWatermark={!this.state.submittedText}
                     errorBackgroundColor={actualErrorBackgroundColor}
+                    ref={(r) => cellVM.editable ? this.saveEditCellRef(r) : noop()}
                     gotoCode={() => this.gotoCellCode(index)}
                     delete={() => this.deleteCell(index)}/>
             </ErrorBoundary>
         );
+    }
+
+    private saveEditCellRef(ref: Cell | null) {
+        this.editCellRef = ref;
     }
 
     private addMarkdown = () => {
@@ -413,6 +462,10 @@ export class MainPanel extends React.Component<IMainPanelProps, IMainPanelState>
         if (newBottom !== this.bottom) {
             this.bottom = newBottom;
         }
+    }
+
+    private updateSelf = (r: HTMLDivElement) => {
+        this.mainPanel = r;
     }
 
     private updatePostOffice = (postOffice: PostOffice) => {
