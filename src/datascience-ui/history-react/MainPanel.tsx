@@ -190,6 +190,7 @@ export class MainPanel extends React.Component<IMainPanelProps, IMainPanelState>
         return false;
     }
 
+    // Uncomment this to use for debugging messages. Add a call to this to stick in dummy sys info messages.
     // private addDebugMessageCell(message: string) {
     //     const cell: ICell = {
     //         id: '0',
