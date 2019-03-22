@@ -86,6 +86,7 @@ export class CurrentPathService extends CacheableLocatorService {
      */
     private async getInterpreter(options: { command: string; args?: string[] }) {
         try {
+            traceInfo(`Spawning command ${options.command} with ${options.args ? options.args.join(' ') : '<no args>'}`);
             const processService = await this.processServiceFactory.create();
             const args = Array.isArray(options.args) ? options.args : [];
             return processService.exec(options.command, args.concat(['-c', 'import sys;print(sys.executable)']), {})

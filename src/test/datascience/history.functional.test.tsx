@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 'use strict';
 import * as assert from 'assert';
+import * as iconv from 'iconv-lite';
+import { spawn, SpawnOptions } from 'child_process';
 import { mount, ReactWrapper } from 'enzyme';
 import * as fs from 'fs-extra';
 import * as path from 'path';
@@ -18,6 +20,7 @@ import {
     IWebPanelProvider,
     WebPanelMessage
 } from '../../client/common/application/types';
+import { traceInfo } from '../../client/common/logger';
 import { createDeferred, Deferred } from '../../client/common/utils/async';
 import { noop } from '../../client/common/utils/misc';
 import { Architecture } from '../../client/common/utils/platform';
@@ -53,6 +56,7 @@ import {
 } from './historyTestHelpers';
 import { SupportedCommands } from './mockJupyterManager';
 import { blurWindow, waitForUpdate } from './reactHelpers';
+import { IDisposable } from '../../client/common/types';
 
 // tslint:disable:max-func-body-length trailing-comma no-any no-multiline-string
 suite('History output tests', () => {
@@ -156,9 +160,49 @@ suite('History output tests', () => {
         return result;
     }
 
+    function exec(file: string, args: string[], options: SpawnOptions = {}): Promise<{stdout: string, stderr: string | undefined}> {
+        const proc = spawn(file, args, options);
+        const deferred = createDeferred<{stdout: string, stderr: string | undefined}>();
+        const disposables: IDisposable[] = [];
+
+        const on = (ee: NodeJS.EventEmitter, name: string, fn: Function) => {
+            ee.on(name, fn as any);
+            disposables.push({ dispose: () => ee.removeListener(name, fn as any) as any});
+        };
+
+        const stdoutBuffers: Buffer[] = [];
+        on(proc.stdout, 'data', (data: Buffer) => stdoutBuffers.push(data));
+        const stderrBuffers: Buffer[] = [];
+        on(proc.stderr, 'data', (data: Buffer) => {
+            stderrBuffers.push(data);
+        });
+
+        proc.once('close', () => {
+            if (deferred.completed) {
+                return;
+            }
+            const stderr: string | undefined = stderrBuffers.length === 0 ? undefined : iconv.decode(Buffer.concat(stderrBuffers), 'utf-8');
+            const stdout = iconv.decode(Buffer.concat(stdoutBuffers), 'utf-8');
+            deferred.resolve({ stdout, stderr });
+            disposables.forEach(disposable => disposable.dispose());
+        });
+        proc.once('error', ex => {
+            deferred.reject(ex);
+            disposables.forEach(disposable => disposable.dispose());
+        });
+
+        return deferred.promise;
+    }
+
+    async function verifyPython() {
+        const result = await exec('python', ['--version']);
+        traceInfo(`Python version results : \r\nstdout: ${result.stdout}\r\nstderr: ${result.stderr}`);
+    }
+
     // tslint:disable-next-line:no-any
     function runMountedTest(name: string, testFunc: (wrapper: ReactWrapper<any, Readonly<{}>, React.Component>) => Promise<void>) {
         test(name, async () => {
+            await verifyPython();
             addMockData(ioc, 'a=1\na', 1);
             if (await jupyterExecution.isNotebookSupported()) {
                 // Create our main panel and tie it into the JSDOM. Ignore progress so we only get a single render
