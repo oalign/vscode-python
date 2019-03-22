@@ -176,6 +176,7 @@ import { MockDocumentManager } from './mockDocumentManager';
 import { MockExtensions } from './mockExtensions';
 import { MockJupyterManager } from './mockJupyterManager';
 import { MockLiveShareApi } from './mockLiveShare';
+import { Logger } from '../../client/common/logger';
 
 export class DataScienceIocContainer extends UnitTestIocContainer {
 
@@ -215,6 +216,7 @@ export class DataScienceIocContainer extends UnitTestIocContainer {
         this.serviceManager.addSingleton<IJupyterExecution>(IJupyterExecution, JupyterExecutionFactory);
         this.serviceManager.addSingleton<IHistoryProvider>(IHistoryProvider, HistoryProvider);
         this.serviceManager.addSingleton<IDataExplorerProvider>(IDataExplorerProvider, DataExplorerProvider);
+        this.serviceManager.addSingleton<ILogger>(ILogger, Logger);
         this.serviceManager.add<IHistory>(IHistory, History);
         this.serviceManager.add<IDataExplorer>(IDataExplorer, DataExplorer);
         this.serviceManager.add<INotebookImporter>(INotebookImporter, JupyterImporter);
@@ -255,7 +257,6 @@ export class DataScienceIocContainer extends UnitTestIocContainer {
         this.serviceManager.addSingletonInstance<ICommandManager>(ICommandManager, this.commandManager);
 
         // Also setup a mock execution service and interpreter service
-        const logger = TypeMoq.Mock.ofType<ILogger>();
         const condaService = TypeMoq.Mock.ofType<ICondaService>();
         const appShell = TypeMoq.Mock.ofType<IApplicationShell>();
         const workspaceService = TypeMoq.Mock.ofType<IWorkspaceService>();
@@ -359,7 +360,6 @@ export class DataScienceIocContainer extends UnitTestIocContainer {
         this.serviceManager.addSingleton<IVirtualEnvironmentsSearchPathProvider>(IVirtualEnvironmentsSearchPathProvider, WorkspaceVirtualEnvironmentsSearchPathProvider, 'workspace');
         this.serviceManager.addSingleton<IVirtualEnvironmentManager>(IVirtualEnvironmentManager, VirtualEnvironmentManager);
 
-        this.serviceManager.addSingletonInstance<ILogger>(ILogger, logger.object);
         this.serviceManager.addSingletonInstance<ICondaService>(ICondaService, condaService.object);
         this.serviceManager.addSingletonInstance<IApplicationShell>(IApplicationShell, appShell.object);
         this.serviceManager.addSingletonInstance<IDocumentManager>(IDocumentManager, this.documentManager);
@@ -422,9 +422,6 @@ export class DataScienceIocContainer extends UnitTestIocContainer {
         appShell.setup(a => a.showInformationMessage(TypeMoq.It.isAny(), TypeMoq.It.isAny())).returns(() => Promise.resolve(''));
         appShell.setup(a => a.showSaveDialog(TypeMoq.It.isAny())).returns(() => Promise.resolve(Uri.file('test.ipynb')));
         appShell.setup(a => a.setStatusBarMessage(TypeMoq.It.isAny())).returns(() => dummyDisposable);
-
-        // tslint:disable-next-line:no-empty no-console
-        logger.setup(l => l.logInformation(TypeMoq.It.isAny())).returns((m) => console.log(m));
 
         const interpreterManager = this.serviceContainer.get<IInterpreterService>(IInterpreterService);
         interpreterManager.initialize();

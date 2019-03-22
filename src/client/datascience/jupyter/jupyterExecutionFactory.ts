@@ -26,6 +26,7 @@ import {
 import { GuestJupyterExecution } from './liveshare/guestJupyterExecution';
 import { HostJupyterExecution } from './liveshare/hostJupyterExecution';
 import { IRoleBasedObject, RoleBasedFactory } from './liveshare/roleBasedFactory';
+import { traceInfo } from '../../common/logger';
 
 interface IJupyterExecutionInterface extends IRoleBasedObject, IJupyterExecution {
 
@@ -105,6 +106,7 @@ export class JupyterExecutionFactory implements IJupyterExecution, IAsyncDisposa
     }
 
     public async isNotebookSupported(cancelToken?: CancellationToken): Promise<boolean> {
+        traceInfo('Checking execution factory for notebook supported');
         const execution = await this.executionFactory.get();
         return execution.isNotebookSupported(cancelToken);
     }

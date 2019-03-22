@@ -2,7 +2,7 @@
 
 import { injectable } from 'inversify';
 import { sendTelemetryEvent } from '../telemetry';
-import { skipIfTest } from './helpers';
+// import { skipIfTest } from './helpers';
 import { ILogger, LogLevel } from './types';
 
 const PREFIX = 'Python Extension: ';
@@ -21,7 +21,6 @@ export class Logger implements ILogger {
     public static verbose(title: string = '') {
         new Logger().logInformation(title);
     }
-    @skipIfTest(false)
     public logError(message: string, ex?: Error) {
         if (ex) {
             console.error(`${PREFIX}${message}`, ex);
@@ -29,7 +28,6 @@ export class Logger implements ILogger {
             console.error(`${PREFIX}${message}`);
         }
     }
-    @skipIfTest(false)
     public logWarning(message: string, ex?: Error) {
         if (ex) {
             console.warn(`${PREFIX}${message}`, ex);
@@ -37,7 +35,6 @@ export class Logger implements ILogger {
             console.warn(`${PREFIX}${message}`);
         }
     }
-    @skipIfTest(false)
     public logInformation(message: string, ex?: Error) {
         if (ex) {
             console.info(`${PREFIX}${message}`, ex);
