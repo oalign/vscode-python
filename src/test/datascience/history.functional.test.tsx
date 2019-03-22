@@ -167,7 +167,8 @@ suite('History output tests', () => {
     }
 
     function exec(file: string, args: string[], options: SpawnOptions = {}): Promise<{stdout: string, stderr: string | undefined}> {
-        const proc = spawn(file, args, options);
+        const defOptions = getDefaultOptions(options);
+        const proc = spawn(file, args, defOptions);
         const deferred = createDeferred<{stdout: string, stderr: string | undefined}>();
         const disposables: IDisposable[] = [];
 
@@ -199,6 +200,32 @@ suite('History output tests', () => {
 
         return deferred.promise;
     }
+
+    function getDefaultOptions<T extends SpawnOptions>(options: T): T {
+        const defaultOptions = { ...options };
+        // const execOptions = defaultOptions as SpawnOptions;
+        // if (execOptions) {
+        //     const encoding = execOptions.encoding = typeof execOptions.encoding === 'string' && execOptions.encoding.length > 0 ? execOptions.encoding : DEFAULT_ENCODING;
+        //     delete execOptions.encoding;
+        //     execOptions.encoding = encoding;
+        // }
+        // if (!defaultOptions.env || Object.keys(defaultOptions.env).length === 0) {
+        //     const env = this.env ? this.env : process.env;
+        //     defaultOptions.env = { ...env };
+        // } else {
+        //     defaultOptions.env = { ...defaultOptions.env };
+        // }
+
+        // Always ensure we have unbuffered output.
+        defaultOptions.env.PYTHONUNBUFFERED = '1';
+        if (!defaultOptions.env.PYTHONIOENCODING) {
+            defaultOptions.env.PYTHONIOENCODING = 'utf-8';
+        }
+
+        return defaultOptions;
+    }
+
+
 
     async function verifyPythonExec(args: string []) {
         const result = await exec('python', args);
@@ -236,6 +263,7 @@ suite('History output tests', () => {
     // tslint:disable-next-line:no-any
     function runMountedTest(name: string, testFunc: (wrapper: ReactWrapper<any, Readonly<{}>, React.Component>) => Promise<void>) {
         test(name, async () => {
+            await verifyPythonExec(['-c', 'import sys;print(sys.executable)']);
             const interpreterPath = await getInterpreter({command: 'python'});
             assert.ok(interpreterPath && interpreterPath.length, 'Python not found');
             // This fails
@@ -243,7 +271,6 @@ suite('History output tests', () => {
             const interperters = await pathService.getInterpreters();
             assert.ok(interperters && interperters.length > 0, 'No interpreters found')
             await verifyPythonExec(['--version']);
-            await verifyPythonExec(['-c', 'import sys;print(sys.executable)']);
             addMockData(ioc, 'a=1\na', 1);
             if (await jupyterExecution.isNotebookSupported()) {
                 // Create our main panel and tie it into the JSDOM. Ignore progress so we only get a single render
