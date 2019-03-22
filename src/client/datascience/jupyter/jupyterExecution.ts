@@ -34,6 +34,7 @@ import {
 } from '../types';
 import { JupyterConnection, JupyterServerInfo } from './jupyterConnection';
 import { JupyterKernelSpec } from './jupyterKernelSpec';
+import { traceInfo, traceWarning } from '../../common/logger';
 
 enum ModuleExistsResult {
     NotFound,
@@ -640,6 +641,12 @@ export class JupyterExecutionBase implements IJupyterExecution {
             } else if (exists === ModuleExistsResult.Found) {
                 return this.commandFactory.createInterpreterCommand(['-m', command], interpreter);
             }
+        } else {
+            if (Cancellation.isCanceled(cancelToken)) {
+                traceInfo(`Cancelling search for command : ${command}`);
+            } else {
+                traceInfo(`Interpreter not found for command : ${command}`);
+            }
         }
 
         return undefined;
@@ -708,6 +715,11 @@ export class JupyterExecutionBase implements IJupyterExecution {
             if (!found && this.supportsSearchingForCommands()) {
                 // Look through all of our interpreters (minus the active one at the same time)
                 const all = await this.interpreterService.getInterpreters();
+
+                if (!all || all.length === 0) {
+                    traceWarning(`No interpreters found. Jupyter cannot run.`);
+                }
+
                 const promises = all.filter(i => i !== current).map(i => this.findInterpreterCommand(command, i, cancelToken));
                 const foundList = await Promise.all(promises);
 
@@ -768,6 +780,7 @@ export class JupyterExecutionBase implements IJupyterExecution {
                 try {
                     const result = await pythonService.execModule('jupyter', [moduleName, '--version'], newOptions);
                     if (!result.stderr) {
+                        this.logger.logInformation(`Success: ${result.stdout} for ${interpreter.path} ${moduleName} --version`);
                         return ModuleExistsResult.FoundJupyter;
                     } else {
                         this.logger.logWarning(`${result.stderr} for ${interpreter.path}`);
@@ -782,6 +795,7 @@ export class JupyterExecutionBase implements IJupyterExecution {
             try {
                 const result = await pythonService.execModule(moduleName, ['--version'], newOptions);
                 if (!result.stderr) {
+                    this.logger.logInformation(`Non Jupyter Success: ${result.stdout} for ${interpreter.path} ${moduleName} --version`);
                     return ModuleExistsResult.Found;
                 } else {
                     this.logger.logWarning(`${result.stderr} for ${interpreter.path}`);
@@ -792,6 +806,7 @@ export class JupyterExecutionBase implements IJupyterExecution {
                 return ModuleExistsResult.NotFound;
             }
         } else {
+            this.logger.logWarning(`Interpreter not found. ${moduleName} cannot be loaded.`);
             return ModuleExistsResult.NotFound;
         }
     }

@@ -105,6 +105,10 @@ export function traceInfo(message: string) {
     new Logger().logInformation(message);
 }
 
+export function traceWarning(message: string) {
+    new Logger().logWarning(message);
+}
+
 export namespace traceDecorators {
     export function verbose(message: string, options: LogOptions = LogOptions.Arguments | LogOptions.ReturnValue) {
         return trace(message, options);
