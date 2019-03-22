@@ -196,7 +196,7 @@ suite('History output tests', () => {
 
     async function verifyPythonExec(args: string []) {
         const result = await exec('python', args);
-        traceInfo(`Python version results for ${args.join(' ')} : \r\nstdout: ${result.stdout}\r\nstderr: ${result.stderr}`);
+        traceInfo(`Python version results for ${args.join(' ')} : \r\nstdout: ${result.stdout}\r\nstderr: ${result.stderr}\r\nenv:${JSON.stringify(process.env)}`);
     }
 
     // tslint:disable-next-line:no-any
