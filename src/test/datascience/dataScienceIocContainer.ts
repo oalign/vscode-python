@@ -29,6 +29,7 @@ import {
 import { AsyncDisposableRegistry } from '../../client/common/asyncDisposableRegistry';
 import { PythonSettings } from '../../client/common/configSettings';
 import { EXTENSION_ROOT_DIR } from '../../client/common/constants';
+import { Logger } from '../../client/common/logger';
 import { PersistentStateFactory } from '../../client/common/persistentState';
 import { IS_WINDOWS } from '../../client/common/platform/constants';
 import { PathUtils } from '../../client/common/platform/pathUtils';
@@ -68,7 +69,7 @@ import {
 } from '../../client/common/types';
 import { noop } from '../../client/common/utils/misc';
 import { EnvironmentVariablesService } from '../../client/common/variables/environment';
-import { SystemVariables } from '../../client/common/variables/systemVariables';
+import { EnvironmentVariablesProvider } from '../../client/common/variables/environmentVariablesProvider';
 import { IEnvironmentVariablesProvider, IEnvironmentVariablesService } from '../../client/common/variables/types';
 import { CodeCssGenerator } from '../../client/datascience/codeCssGenerator';
 import { DataExplorer } from '../../client/datascience/data-viewing/dataExplorer';
@@ -176,8 +177,6 @@ import { MockDocumentManager } from './mockDocumentManager';
 import { MockExtensions } from './mockExtensions';
 import { MockJupyterManager } from './mockJupyterManager';
 import { MockLiveShareApi } from './mockLiveShare';
-import { Logger } from '../../client/common/logger';
-import { EnvironmentVariablesProvider } from '../../client/common/variables/environmentVariablesProvider';
 
 export class DataScienceIocContainer extends UnitTestIocContainer {
 

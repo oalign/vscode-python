@@ -2,7 +2,6 @@
 
 import { injectable } from 'inversify';
 import { sendTelemetryEvent } from '../telemetry';
-// import { skipIfTest } from './helpers';
 import { ILogger, LogLevel } from './types';
 import { isTestExecution } from './constants';
 

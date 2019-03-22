@@ -2,8 +2,6 @@
 // Licensed under the MIT License.
 'use strict';
 import * as assert from 'assert';
-import * as iconv from 'iconv-lite';
-import { spawn, SpawnOptions } from 'child_process';
 import { mount, ReactWrapper } from 'enzyme';
 import * as fs from 'fs-extra';
 import * as path from 'path';
@@ -20,7 +18,6 @@ import {
     IWebPanelProvider,
     WebPanelMessage
 } from '../../client/common/application/types';
-import { traceInfo, traceError, traceWarning } from '../../client/common/logger';
 import { createDeferred, Deferred } from '../../client/common/utils/async';
 import { noop } from '../../client/common/utils/misc';
 import { Architecture } from '../../client/common/utils/platform';
@@ -28,7 +25,7 @@ import { EditorContexts } from '../../client/datascience/constants';
 import { HistoryMessageListener } from '../../client/datascience/history/historyMessageListener';
 import { HistoryMessages } from '../../client/datascience/history/historyTypes';
 import { IHistory, IHistoryProvider, IJupyterExecution } from '../../client/datascience/types';
-import { InterpreterType, PythonInterpreter, IInterpreterLocatorService, CURRENT_PATH_SERVICE } from '../../client/interpreter/contracts';
+import { InterpreterType, PythonInterpreter } from '../../client/interpreter/contracts';
 import { CellButton } from '../../datascience-ui/history-react/cellButton';
 import { MainPanel } from '../../datascience-ui/history-react/MainPanel';
 import { IVsCodeApi } from '../../datascience-ui/react-common/postOffice';
@@ -56,10 +53,6 @@ import {
 } from './historyTestHelpers';
 import { SupportedCommands } from './mockJupyterManager';
 import { blurWindow, waitForUpdate } from './reactHelpers';
-import { IDisposable } from '../../client/common/types';
-import { IProcessServiceFactory } from '../../client/common/process/types';
-import { IFileSystem } from '../../client/common/platform/types';
-import { IEnvironmentVariablesProvider, EnvironmentVariables } from '../../client/common/variables/types';
 
 // tslint:disable:max-func-body-length trailing-comma no-any no-multiline-string
 suite('History output tests', () => {
@@ -72,10 +65,6 @@ suite('History output tests', () => {
     let globalAcquireVsCodeApi: () => IVsCodeApi;
     let ioc: DataScienceIocContainer;
     let webPanelMessagePromise: Deferred<void> | undefined;
-    let processServiceFactory : IProcessServiceFactory;
-    let fileSystem : IFileSystem;
-    let envVarService : IEnvironmentVariablesProvider;
-    let customVars : EnvironmentVariables;
 
     const workingPython: PythonInterpreter = {
         path: '/foo/bar/python.exe',
@@ -88,9 +77,6 @@ suite('History output tests', () => {
     setup(() => {
         ioc = new DataScienceIocContainer();
         ioc.registerDataScienceTypes();
-        processServiceFactory = ioc.get<IProcessServiceFactory>(IProcessServiceFactory);
-        fileSystem = ioc.get<IFileSystem>(IFileSystem);
-        envVarService = ioc.get<IEnvironmentVariablesProvider>(IEnvironmentVariablesProvider);
 
         if (ioc.mockJupyter) {
             ioc.mockJupyter.addInterpreter(workingPython, SupportedCommands.all);
@@ -170,123 +156,9 @@ suite('History output tests', () => {
         return result;
     }
 
-    function exec(file: string, args: string[], options: SpawnOptions = {}): Promise<{stdout: string, stderr: string | undefined}> {
-        const defOptions = getDefaultOptions(options);
-        const proc = spawn(file, args, defOptions);
-        const deferred = createDeferred<{stdout: string, stderr: string | undefined}>();
-        const disposables: IDisposable[] = [];
-
-        const on = (ee: NodeJS.EventEmitter, name: string, fn: Function) => {
-            ee.on(name, fn as any);
-            disposables.push({ dispose: () => ee.removeListener(name, fn as any) as any});
-        };
-
-        const stdoutBuffers: Buffer[] = [];
-        on(proc.stdout, 'data', (data: Buffer) => stdoutBuffers.push(data));
-        const stderrBuffers: Buffer[] = [];
-        on(proc.stderr, 'data', (data: Buffer) => {
-            stderrBuffers.push(data);
-        });
-
-        proc.once('close', () => {
-            if (deferred.completed) {
-                return;
-            }
-            const stderr: string | undefined = stderrBuffers.length === 0 ? undefined : iconv.decode(Buffer.concat(stderrBuffers), 'utf-8');
-            const stdout = iconv.decode(Buffer.concat(stdoutBuffers), 'utf-8');
-            deferred.resolve({ stdout, stderr });
-            disposables.forEach(disposable => disposable.dispose());
-        });
-        proc.once('error', ex => {
-            deferred.reject(ex);
-            disposables.forEach(disposable => disposable.dispose());
-        });
-
-        return deferred.promise;
-    }
-
-    function getDefaultOptions<T extends SpawnOptions>(options: T): T {
-        const defaultOptions = { ...options };
-        const execOptions = defaultOptions as SpawnOptions;
-        // if (execOptions) {
-        //     const encoding = execOptions.encoding = typeof execOptions.encoding === 'string' && execOptions.encoding.length > 0 ? execOptions.encoding : DEFAULT_ENCODING;
-        //     delete execOptions.encoding;
-        //     execOptions.encoding = encoding;
-        // }
-        if (!defaultOptions.env || Object.keys(defaultOptions.env).length === 0) {
-            const env = customVars ? customVars : process.env;
-            defaultOptions.env = { ...env };
-        } else {
-            defaultOptions.env = { ...defaultOptions.env };
-        }
-
-        // Always ensure we have unbuffered output.
-        if (!defaultOptions.env) {
-            defaultOptions.env = process.env;
-        } else {
-            // Diff them 
-            const defaultVars = new Set<string>(Object.keys(process.env));
-            const customVars = new Set<string>(Object.keys(defaultOptions.env));
-            const diff = [...defaultVars].filter(x => !customVars.has(x));
-            if (diff && diff.length > 0) {
-                traceWarning(`Default env doesn't match custom:\r\n${diff.join('\r\n')}`);
-            }
-        }
-        defaultOptions.env.PYTHONUNBUFFERED = '1';
-        if (!defaultOptions.env.PYTHONIOENCODING) {
-            defaultOptions.env.PYTHONIOENCODING = 'utf-8';
-        }
-
-        return defaultOptions;
-    }
-
-
-
-    async function verifyPythonExec(args: string [], options?: SpawnOptions) {
-        const result = await exec('python', args, options);
-        traceInfo(`Python version results for ${args.join(' ')} : \r\nstdout: ${result.stdout}\r\nstderr: ${result.stderr}`);
-    }
-
-    /**
-     * Return the path to the interpreter (or the default if not found).
-     */
-    async function getInterpreter(options: { command: string; args?: string[] }) {
-        try {
-            const processService = await processServiceFactory.create();
-            const args = Array.isArray(options.args) ? options.args : [];
-            traceInfo(`Spawning command ${options.command} with ${args.join(' ')}`);
-            return processService.exec(options.command, args.concat(['-c', 'import sys;print(sys.executable)']), {})
-                .then(output => output.stdout.trim())
-                .then(async value => {
-                    if (value.length > 0 && await fileSystem.fileExists(value)) {
-                        return value;
-                    }
-                    traceError(`Detection of Python Interpreter for Command ${options.command} and args ${args.join(' ')} failed as file ${value} does not exist`);
-                    return '';
-                })
-                .catch(_ex => {
-                    traceInfo(`Detection of Python Interpreter for Command ${options.command} and args ${args.join(' ')} failed`);
-                    return '';
-                });    // Ignore exceptions in getting the executable.
-        } catch (ex) {
-            traceError(`Detection of Python Interpreter for ${JSON.stringify(options)} failed`, ex);
-            return '';    // Ignore exceptions in getting the executable.
-        }
-    }
-
-
     // tslint:disable-next-line:no-any
     function runMountedTest(name: string, testFunc: (wrapper: ReactWrapper<any, Readonly<{}>, React.Component>) => Promise<void>) {
         test(name, async () => {
-            customVars = await envVarService.getEnvironmentVariables();
-            //await verifyPythonExec(['-c', 'import sys;print(sys.executable)']);
-            const interpreterPath = await getInterpreter({command: 'python'});
-            assert.ok(interpreterPath && interpreterPath.length, 'Python not found');
-            // This fails
-            const pathService = ioc.get<IInterpreterLocatorService>(IInterpreterLocatorService, CURRENT_PATH_SERVICE);
-            const interperters = await pathService.getInterpreters();
-            assert.ok(interperters && interperters.length > 0, 'No interpreters found')
-            await verifyPythonExec(['--version']);
             addMockData(ioc, 'a=1\na', 1);
             if (await jupyterExecution.isNotebookSupported()) {
                 // Create our main panel and tie it into the JSDOM. Ignore progress so we only get a single render

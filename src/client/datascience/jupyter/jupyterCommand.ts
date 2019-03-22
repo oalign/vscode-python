@@ -15,7 +15,6 @@ import {
 import { IEnvironmentActivationService } from '../../interpreter/activation/types';
 import { IInterpreterService, PythonInterpreter } from '../../interpreter/contracts';
 import { IJupyterCommand, IJupyterCommandFactory } from '../types';
-import { traceError, traceInfo } from '../../common/logger';
 
 // JupyterCommand objects represent some process that can be launched that should be guaranteed to work because it
 // was found by testing it previously
@@ -51,14 +50,7 @@ class ProcessJupyterCommand implements IJupyterCommand {
         newOptions.env = await this.fixupEnv(newOptions.env);
         const launcher = await this.launcherPromise;
         const newArgs = [...this.requiredArgs, ...args];
-        const result = await launcher.exec(this.exe, newArgs, newOptions);
-        if (result.stderr) {
-            traceError(result.stderr);
-        }
-        if (result.stdout) {
-            traceInfo(result.stdout);
-        }
-        return result;
+        return launcher.exec(this.exe, newArgs, newOptions);
     }
 
     private fixupEnv(_env: NodeJS.ProcessEnv) : Promise<NodeJS.ProcessEnv | undefined> {

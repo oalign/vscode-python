@@ -88,7 +88,6 @@ export class CurrentPathService extends CacheableLocatorService {
         try {
             const processService = await this.processServiceFactory.create();
             const args = Array.isArray(options.args) ? options.args : [];
-            traceInfo(`Spawning command ${options.command} with ${options.args ? options.args.join(' ') : '<no args>'}`);
             return processService.exec(options.command, args.concat(['-c', 'import sys;print(sys.executable)']), {})
                 .then(output => output.stdout.trim())
                 .then(async value => {
@@ -103,7 +102,7 @@ export class CurrentPathService extends CacheableLocatorService {
                     return '';
                 });    // Ignore exceptions in getting the executable.
         } catch (ex) {
-            traceError(`Detection of Python Interpreter for ${JSON.stringify(options)} failed`, ex);
+            traceError(`Detection of Python Interpreter for Command ${options.command} failed`, ex);
             return '';    // Ignore exceptions in getting the executable.
         }
     }
