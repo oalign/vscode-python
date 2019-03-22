@@ -20,7 +20,7 @@ import {
     IWebPanelProvider,
     WebPanelMessage
 } from '../../client/common/application/types';
-import { traceInfo } from '../../client/common/logger';
+import { traceInfo, traceError } from '../../client/common/logger';
 import { createDeferred, Deferred } from '../../client/common/utils/async';
 import { noop } from '../../client/common/utils/misc';
 import { Architecture } from '../../client/common/utils/platform';
@@ -57,6 +57,8 @@ import {
 import { SupportedCommands } from './mockJupyterManager';
 import { blurWindow, waitForUpdate } from './reactHelpers';
 import { IDisposable } from '../../client/common/types';
+import { IProcessServiceFactory } from '../../client/common/process/types';
+import { IFileSystem } from '../../client/common/platform/types';
 
 // tslint:disable:max-func-body-length trailing-comma no-any no-multiline-string
 suite('History output tests', () => {
@@ -69,6 +71,8 @@ suite('History output tests', () => {
     let globalAcquireVsCodeApi: () => IVsCodeApi;
     let ioc: DataScienceIocContainer;
     let webPanelMessagePromise: Deferred<void> | undefined;
+    let processServiceFactory : IProcessServiceFactory;
+    let fileSystem : IFileSystem;
 
     const workingPython: PythonInterpreter = {
         path: '/foo/bar/python.exe',
@@ -81,6 +85,8 @@ suite('History output tests', () => {
     setup(() => {
         ioc = new DataScienceIocContainer();
         ioc.registerDataScienceTypes();
+        processServiceFactory = ioc.get<IProcessServiceFactory>(IProcessServiceFactory);
+        fileSystem = ioc.get<IFileSystem>(IFileSystem);
 
         if (ioc.mockJupyter) {
             ioc.mockJupyter.addInterpreter(workingPython, SupportedCommands.all);
@@ -199,12 +205,43 @@ suite('History output tests', () => {
         traceInfo(`Python version results for ${args.join(' ')} : \r\nstdout: ${result.stdout}\r\nstderr: ${result.stderr}`);
     }
 
+    /**
+     * Return the path to the interpreter (or the default if not found).
+     */
+    async function getInterpreter(options: { command: string; args?: string[] }) {
+        try {
+            const processService = await processServiceFactory.create();
+            const args = Array.isArray(options.args) ? options.args : [];
+            traceInfo(`Spawning command ${options.command} with ${options.args ? options.args.join(' ') : '<no args>'}`);
+            return processService.exec(options.command, args.concat(['-c', 'import sys;print(sys.executable)']), {})
+                .then(output => output.stdout.trim())
+                .then(async value => {
+                    if (value.length > 0 && await fileSystem.fileExists(value)) {
+                        return value;
+                    }
+                    traceError(`Detection of Python Interpreter for Command ${options.command} and args ${args.join(' ')} failed as file ${value} does not exist`);
+                    return '';
+                })
+                .catch(_ex => {
+                    traceInfo(`Detection of Python Interpreter for Command ${options.command} and args ${args.join(' ')} failed`);
+                    return '';
+                });    // Ignore exceptions in getting the executable.
+        } catch (ex) {
+            traceError(`Detection of Python Interpreter for ${JSON.stringify(options)} failed`, ex);
+            return '';    // Ignore exceptions in getting the executable.
+        }
+    }
+
+
     // tslint:disable-next-line:no-any
     function runMountedTest(name: string, testFunc: (wrapper: ReactWrapper<any, Readonly<{}>, React.Component>) => Promise<void>) {
         test(name, async () => {
+            const interpreterPath = await getInterpreter({command: 'python'});
+            assert.ok(interpreterPath && interpreterPath.length, 'Python not found');
+            // This fails
             const pathService = ioc.get<IInterpreterLocatorService>(IInterpreterLocatorService, CURRENT_PATH_SERVICE);
             const interperters = await pathService.getInterpreters();
-            assert.ok(interperters, 'No interpreters found')
+            assert.ok(interperters && interperters.length > 0, 'No interpreters found')
             await verifyPythonExec(['--version']);
             await verifyPythonExec(['-c', 'import sys;print(sys.executable)']);
             addMockData(ioc, 'a=1\na', 1);
