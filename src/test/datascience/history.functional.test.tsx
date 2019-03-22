@@ -20,7 +20,7 @@ import {
     IWebPanelProvider,
     WebPanelMessage
 } from '../../client/common/application/types';
-import { traceInfo, traceError } from '../../client/common/logger';
+import { traceInfo, traceError, traceWarning } from '../../client/common/logger';
 import { createDeferred, Deferred } from '../../client/common/utils/async';
 import { noop } from '../../client/common/utils/misc';
 import { Architecture } from '../../client/common/utils/platform';
@@ -220,8 +220,17 @@ suite('History output tests', () => {
         // }
 
         // Always ensure we have unbuffered output.
-        envVarService.getEnvironmentVariables().then(_v => traceInfo('got vars'));
-        defaultOptions.env = process.env;
+        if (!defaultOptions.env) {
+            defaultOptions.env = process.env;
+        } else {
+            // Diff them 
+            const defaultVars = new Set<string>(Object.keys(process.env));
+            const customVars = new Set<string>(Object.keys(defaultOptions.env));
+            const diff = [...defaultVars].filter(x => !customVars.has(x));
+            if (diff && diff.length > 0) {
+                traceWarning(`Default env doesn't match custom:\r\n${diff.join(' ')}`);
+            }
+        }
         defaultOptions.env.PYTHONUNBUFFERED = '1';
         if (!defaultOptions.env.PYTHONIOENCODING) {
             defaultOptions.env.PYTHONIOENCODING = 'utf-8';
@@ -232,8 +241,8 @@ suite('History output tests', () => {
 
 
 
-    async function verifyPythonExec(args: string []) {
-        const result = await exec('python', args);
+    async function verifyPythonExec(args: string [], options?: SpawnOptions) {
+        const result = await exec('python', args, options);
         traceInfo(`Python version results for ${args.join(' ')} : \r\nstdout: ${result.stdout}\r\nstderr: ${result.stderr}`);
     }
 
@@ -268,7 +277,8 @@ suite('History output tests', () => {
     // tslint:disable-next-line:no-any
     function runMountedTest(name: string, testFunc: (wrapper: ReactWrapper<any, Readonly<{}>, React.Component>) => Promise<void>) {
         test(name, async () => {
-            await verifyPythonExec(['-c', 'import sys;print(sys.executable)']);
+            const vars = await envVarService.getEnvironmentVariables();
+            await verifyPythonExec(['-c', 'import sys;print(sys.executable)'], {env: vars});
             const interpreterPath = await getInterpreter({command: 'python'});
             assert.ok(interpreterPath && interpreterPath.length, 'Python not found');
             // This fails
