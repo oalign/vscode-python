@@ -217,6 +217,7 @@ suite('History output tests', () => {
         // }
 
         // Always ensure we have unbuffered output.
+        defaultOptions.env = process.env;
         defaultOptions.env.PYTHONUNBUFFERED = '1';
         if (!defaultOptions.env.PYTHONIOENCODING) {
             defaultOptions.env.PYTHONIOENCODING = 'utf-8';
