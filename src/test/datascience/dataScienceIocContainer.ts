@@ -459,8 +459,8 @@ export class DataScienceIocContainer extends UnitTestIocContainer {
         return this.jupyterMock;
     }
 
-    public get<T>(serviceIdentifier: interfaces.ServiceIdentifier<T>) : T {
-        return this.serviceManager.get<T>(serviceIdentifier);
+    public get<T>(serviceIdentifier: interfaces.ServiceIdentifier<T>, name?: string | number | symbol) : T {
+        return this.serviceManager.get<T>(serviceIdentifier, name);
     }
 
     public addDocument(code: string, file: string) {

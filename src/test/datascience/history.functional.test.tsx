@@ -28,7 +28,7 @@ import { EditorContexts } from '../../client/datascience/constants';
 import { HistoryMessageListener } from '../../client/datascience/history/historyMessageListener';
 import { HistoryMessages } from '../../client/datascience/history/historyTypes';
 import { IHistory, IHistoryProvider, IJupyterExecution } from '../../client/datascience/types';
-import { InterpreterType, PythonInterpreter } from '../../client/interpreter/contracts';
+import { InterpreterType, PythonInterpreter, IInterpreterLocatorService, CURRENT_PATH_SERVICE } from '../../client/interpreter/contracts';
 import { CellButton } from '../../datascience-ui/history-react/cellButton';
 import { MainPanel } from '../../datascience-ui/history-react/MainPanel';
 import { IVsCodeApi } from '../../datascience-ui/react-common/postOffice';
@@ -196,12 +196,15 @@ suite('History output tests', () => {
 
     async function verifyPythonExec(args: string []) {
         const result = await exec('python', args);
-        traceInfo(`Python version results for ${args.join(' ')} : \r\nstdout: ${result.stdout}\r\nstderr: ${result.stderr}\r\nenv:${JSON.stringify(process.env, undefined, 4)}`);
+        traceInfo(`Python version results for ${args.join(' ')} : \r\nstdout: ${result.stdout}\r\nstderr: ${result.stderr}`);
     }
 
     // tslint:disable-next-line:no-any
     function runMountedTest(name: string, testFunc: (wrapper: ReactWrapper<any, Readonly<{}>, React.Component>) => Promise<void>) {
         test(name, async () => {
+            const pathService = ioc.get<IInterpreterLocatorService>(IInterpreterLocatorService, CURRENT_PATH_SERVICE);
+            const interperters = await pathService.getInterpreters();
+            assert.ok(interperters, 'No interpreters found')
             await verifyPythonExec(['--version']);
             await verifyPythonExec(['-c', 'import sys;print(sys.executable)']);
             addMockData(ioc, 'a=1\na', 1);
