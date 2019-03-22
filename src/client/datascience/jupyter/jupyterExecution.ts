@@ -482,6 +482,7 @@ export class JupyterExecutionBase implements IJupyterExecution {
     private isCommandSupported = async (command: string, cancelToken?: CancellationToken): Promise<boolean> => {
         // See if we can find the command
         try {
+            traceInfo(`Checking command ${command}`);
             const result = await this.findBestCommand(command, cancelToken);
             return result !== undefined;
         } catch (err) {
@@ -712,6 +713,9 @@ export class JupyterExecutionBase implements IJupyterExecution {
             // First we look in the current interpreter
             const current = await this.interpreterService.getActiveInterpreter();
             let found = current ? await this.findInterpreterCommand(command, current, cancelToken) : undefined;
+            if (!found) {
+                traceInfo(`Active interpreter does not support ${command}. Interpreter is ${current ? current.displayName : 'undefined'}.`);
+            }
             if (!found && this.supportsSearchingForCommands()) {
                 // Look through all of our interpreters (minus the active one at the same time)
                 const all = await this.interpreterService.getInterpreters();
