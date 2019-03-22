@@ -1,5 +1,5 @@
 # List of requirements for functional tests
-jupyter
-numpy
-matplotlib
-pandas
+#jupyter
+#numpy
+#matplotlib
+#pandas
