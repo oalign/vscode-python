@@ -195,7 +195,7 @@ suite('History output tests', () => {
     }
 
     async function verifyPython() {
-        const result = await exec('python', ['--version']);
+        const result = await exec('python', ['-c', 'import sys;print(sys.executable)']);
         traceInfo(`Python version results : \r\nstdout: ${result.stdout}\r\nstderr: ${result.stderr}`);
     }
 
