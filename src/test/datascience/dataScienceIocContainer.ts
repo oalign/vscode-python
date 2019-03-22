@@ -177,6 +177,7 @@ import { MockExtensions } from './mockExtensions';
 import { MockJupyterManager } from './mockJupyterManager';
 import { MockLiveShareApi } from './mockLiveShare';
 import { Logger } from '../../client/common/logger';
+import { EnvironmentVariablesProvider } from '../../client/common/variables/environmentVariablesProvider';
 
 export class DataScienceIocContainer extends UnitTestIocContainer {
 
@@ -334,9 +335,6 @@ export class DataScienceIocContainer extends UnitTestIocContainer {
             .returns(() => [workspaceFolder]);
         workspaceService.setup(w => w.rootPath).returns(() => '~');
 
-        const systemVariables: SystemVariables = new SystemVariables(undefined);
-        const env = { ...systemVariables };
-
         // Look on the path for python
         const pythonPath = this.findPythonPath();
 
@@ -354,8 +352,7 @@ export class DataScienceIocContainer extends UnitTestIocContainer {
         condaService.setup(c => c.isCondaEnvironment(TypeMoq.It.isValue(pythonPath))).returns(() => Promise.resolve(false));
         condaService.setup(c => c.condaEnvironmentsFile).returns(() => undefined);
 
-        const envVarsProvider: TypeMoq.IMock<IEnvironmentVariablesProvider> = TypeMoq.Mock.ofType<IEnvironmentVariablesProvider>();
-        envVarsProvider.setup(e => e.getEnvironmentVariables(TypeMoq.It.isAny())).returns(() => Promise.resolve(env));
+        this.serviceManager.addSingleton<IEnvironmentVariablesProvider>(IEnvironmentVariablesProvider, EnvironmentVariablesProvider);
         this.serviceManager.addSingleton<IVirtualEnvironmentsSearchPathProvider>(IVirtualEnvironmentsSearchPathProvider, GlobalVirtualEnvironmentsSearchPathProvider, 'global');
         this.serviceManager.addSingleton<IVirtualEnvironmentsSearchPathProvider>(IVirtualEnvironmentsSearchPathProvider, WorkspaceVirtualEnvironmentsSearchPathProvider, 'workspace');
         this.serviceManager.addSingleton<IVirtualEnvironmentManager>(IVirtualEnvironmentManager, VirtualEnvironmentManager);
@@ -368,7 +365,6 @@ export class DataScienceIocContainer extends UnitTestIocContainer {
         this.serviceManager.addSingletonInstance<IDataScience>(IDataScience, datascience.object);
         this.serviceManager.addSingleton<IBufferDecoder>(IBufferDecoder, BufferDecoder);
         this.serviceManager.addSingleton<IEnvironmentVariablesService>(IEnvironmentVariablesService, EnvironmentVariablesService);
-        this.serviceManager.addSingletonInstance<IEnvironmentVariablesProvider>(IEnvironmentVariablesProvider, envVarsProvider.object);
         this.serviceManager.addSingleton<IPathUtils>(IPathUtils, PathUtils);
         this.serviceManager.addSingletonInstance<boolean>(IsWindows, IS_WINDOWS);
 

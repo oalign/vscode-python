@@ -59,7 +59,7 @@ import { blurWindow, waitForUpdate } from './reactHelpers';
 import { IDisposable } from '../../client/common/types';
 import { IProcessServiceFactory } from '../../client/common/process/types';
 import { IFileSystem } from '../../client/common/platform/types';
-import { IEnvironmentVariablesProvider } from '../../client/common/variables/types';
+import { IEnvironmentVariablesProvider, EnvironmentVariables } from '../../client/common/variables/types';
 
 // tslint:disable:max-func-body-length trailing-comma no-any no-multiline-string
 suite('History output tests', () => {
@@ -75,6 +75,7 @@ suite('History output tests', () => {
     let processServiceFactory : IProcessServiceFactory;
     let fileSystem : IFileSystem;
     let envVarService : IEnvironmentVariablesProvider;
+    let customVars : EnvironmentVariables;
 
     const workingPython: PythonInterpreter = {
         path: '/foo/bar/python.exe',
@@ -206,18 +207,18 @@ suite('History output tests', () => {
 
     function getDefaultOptions<T extends SpawnOptions>(options: T): T {
         const defaultOptions = { ...options };
-        // const execOptions = defaultOptions as SpawnOptions;
+        const execOptions = defaultOptions as SpawnOptions;
         // if (execOptions) {
         //     const encoding = execOptions.encoding = typeof execOptions.encoding === 'string' && execOptions.encoding.length > 0 ? execOptions.encoding : DEFAULT_ENCODING;
         //     delete execOptions.encoding;
         //     execOptions.encoding = encoding;
         // }
-        // if (!defaultOptions.env || Object.keys(defaultOptions.env).length === 0) {
-        //     const env = this.env ? this.env : process.env;
-        //     defaultOptions.env = { ...env };
-        // } else {
-        //     defaultOptions.env = { ...defaultOptions.env };
-        // }
+        if (!defaultOptions.env || Object.keys(defaultOptions.env).length === 0) {
+            const env = customVars ? customVars : process.env;
+            defaultOptions.env = { ...env };
+        } else {
+            defaultOptions.env = { ...defaultOptions.env };
+        }
 
         // Always ensure we have unbuffered output.
         if (!defaultOptions.env) {
@@ -277,8 +278,8 @@ suite('History output tests', () => {
     // tslint:disable-next-line:no-any
     function runMountedTest(name: string, testFunc: (wrapper: ReactWrapper<any, Readonly<{}>, React.Component>) => Promise<void>) {
         test(name, async () => {
-            const vars = await envVarService.getEnvironmentVariables();
-            await verifyPythonExec(['-c', 'import sys;print(sys.executable)'], {env: vars.env});
+            customVars = await envVarService.getEnvironmentVariables();
+            //await verifyPythonExec(['-c', 'import sys;print(sys.executable)']);
             const interpreterPath = await getInterpreter({command: 'python'});
             assert.ok(interpreterPath && interpreterPath.length, 'Python not found');
             // This fails
