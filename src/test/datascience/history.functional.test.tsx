@@ -228,7 +228,7 @@ suite('History output tests', () => {
             const customVars = new Set<string>(Object.keys(defaultOptions.env));
             const diff = [...defaultVars].filter(x => !customVars.has(x));
             if (diff && diff.length > 0) {
-                traceWarning(`Default env doesn't match custom:\r\n${diff.join(' ')}`);
+                traceWarning(`Default env doesn't match custom:\r\n${diff.join('\r\n')}`);
             }
         }
         defaultOptions.env.PYTHONUNBUFFERED = '1';
@@ -278,7 +278,7 @@ suite('History output tests', () => {
     function runMountedTest(name: string, testFunc: (wrapper: ReactWrapper<any, Readonly<{}>, React.Component>) => Promise<void>) {
         test(name, async () => {
             const vars = await envVarService.getEnvironmentVariables();
-            await verifyPythonExec(['-c', 'import sys;print(sys.executable)'], {env: vars});
+            await verifyPythonExec(['-c', 'import sys;print(sys.executable)'], {env: vars.env});
             const interpreterPath = await getInterpreter({command: 'python'});
             assert.ok(interpreterPath && interpreterPath.length, 'Python not found');
             // This fails
