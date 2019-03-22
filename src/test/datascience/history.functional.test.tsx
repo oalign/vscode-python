@@ -59,6 +59,7 @@ import { blurWindow, waitForUpdate } from './reactHelpers';
 import { IDisposable } from '../../client/common/types';
 import { IProcessServiceFactory } from '../../client/common/process/types';
 import { IFileSystem } from '../../client/common/platform/types';
+import { IEnvironmentVariablesProvider } from '../../client/common/variables/types';
 
 // tslint:disable:max-func-body-length trailing-comma no-any no-multiline-string
 suite('History output tests', () => {
@@ -73,6 +74,7 @@ suite('History output tests', () => {
     let webPanelMessagePromise: Deferred<void> | undefined;
     let processServiceFactory : IProcessServiceFactory;
     let fileSystem : IFileSystem;
+    let envVarService : IEnvironmentVariablesProvider;
 
     const workingPython: PythonInterpreter = {
         path: '/foo/bar/python.exe',
@@ -87,6 +89,7 @@ suite('History output tests', () => {
         ioc.registerDataScienceTypes();
         processServiceFactory = ioc.get<IProcessServiceFactory>(IProcessServiceFactory);
         fileSystem = ioc.get<IFileSystem>(IFileSystem);
+        envVarService = ioc.get<IEnvironmentVariablesProvider>(IEnvironmentVariablesProvider);
 
         if (ioc.mockJupyter) {
             ioc.mockJupyter.addInterpreter(workingPython, SupportedCommands.all);
@@ -217,6 +220,7 @@ suite('History output tests', () => {
         // }
 
         // Always ensure we have unbuffered output.
+        envVarService.getEnvironmentVariables().then(_v => traceInfo('got vars'));
         defaultOptions.env = process.env;
         defaultOptions.env.PYTHONUNBUFFERED = '1';
         if (!defaultOptions.env.PYTHONIOENCODING) {
