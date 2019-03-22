@@ -212,7 +212,7 @@ suite('History output tests', () => {
         try {
             const processService = await processServiceFactory.create();
             const args = Array.isArray(options.args) ? options.args : [];
-            traceInfo(`Spawning command ${options.command} with ${options.args ? options.args.join(' ') : '<no args>'}`);
+            traceInfo(`Spawning command ${options.command} with ${args.join(' ')}`);
             return processService.exec(options.command, args.concat(['-c', 'import sys;print(sys.executable)']), {})
                 .then(output => output.stdout.trim())
                 .then(async value => {
