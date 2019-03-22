@@ -103,7 +103,7 @@ export class CurrentPathService extends CacheableLocatorService {
                     return '';
                 });    // Ignore exceptions in getting the executable.
         } catch (ex) {
-            traceError(`Detection of Python Interpreter for Command ${options.command} failed`, ex);
+            traceError(`Detection of Python Interpreter for ${JSON.stringify(options)} failed`, ex);
             return '';    // Ignore exceptions in getting the executable.
         }
     }
