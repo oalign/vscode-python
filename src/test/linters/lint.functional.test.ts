@@ -309,7 +309,7 @@ suite('Linting Functional Tests', () => {
             // TODO: Add coverage for these linters.
             if ([Product.bandit, Product.mypy, Product.pylama, Product.prospector].some(p => p === product)) {
                 // tslint:disable-next-line:no-invalid-this
-                this.skip();
+                return this.skip();
             }
 
             const fixture = new TestFixture();
@@ -324,7 +324,7 @@ suite('Linting Functional Tests', () => {
             // TODO: Add coverage for these linters.
             if ([Product.bandit, Product.mypy, Product.pylama, Product.prospector].some(p => p === product)) {
                 // tslint:disable-next-line:no-invalid-this
-                this.skip();
+                return this.skip();
             }
 
             const fixture = new TestFixture();
