@@ -30,7 +30,7 @@ class ExitReporter {
                     WINR();
                 }
                 console.info('Will Exit from custom PVSC Mocha Reporter.');
-                // dump();
+                dump();
                 // // NodeJs generally waits for pending timeouts, however the process running Mocha
                 // // (generally this is an instance of VSC), does not exit, hence CI timeouts.
                 // // No idea why it times, out. Once again, this is a hack.
