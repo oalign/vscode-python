@@ -66,6 +66,10 @@ export class UnitTestManagementService implements IUnitTestManagementService, Di
         if (this.workspaceTestManagerService) {
             this.workspaceTestManagerService.dispose();
         }
+        if (this.configChangedTimer) {
+            this.configChangedTimer.unref();
+            this.configChangedTimer = undefined;
+        }
     }
     public get onDidStatusChange(): Event<WorkspaceTestStatus> {
         return this._onDidStatusChange.event;
