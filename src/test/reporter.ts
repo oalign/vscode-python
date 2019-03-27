@@ -34,35 +34,38 @@ class ExitReporter {
                 }
                 console.info('Will Exit from custom PVSC Mocha Reporter.');
                 dump();
-                // // NodeJs generally waits for pending timeouts, however the process running Mocha
-                // // (generally this is an instance of VSC), does not exit, hence CI timeouts.
-                // // No idea why it times, out. Once again, this is a hack.
-                // // Solution (i.e. hack), lets add a timeout with a delay of 10 seconds,
-                // // & if this process doesn't die, lets kill it.
-                function die() {
-                    // setTimeout(() => {
-                    console.info('Exiting from custom PVSC Mocha Reporter.');
-                    dump();
-                    console.info('Bye.');
-                    process.exit(stats.failures === 0 ? 0 : 1);
-                    console.info('Bye.');
-                    process.kill(process.pid, 'SIGTERM');
-                    console.info('Bye.');
-                    console.info('Bye.');
-                    // }, 10000);
+                function something() {
+                    // // NodeJs generally waits for pending timeouts, however the process running Mocha
+                    // // (generally this is an instance of VSC), does not exit, hence CI timeouts.
+                    // // No idea why it times, out. Once again, this is a hack.
+                    // // Solution (i.e. hack), lets add a timeout with a delay of 10 seconds,
+                    // // & if this process doesn't die, lets kill it.
+                    function die() {
+                        // setTimeout(() => {
+                        console.info('Exiting from custom PVSC Mocha Reporter.');
+                        dump();
+                        console.info('Bye.');
+                        process.exit(stats.failures === 0 ? 0 : 1);
+                        console.info('Bye.');
+                        process.kill(process.pid, 'SIGTERM');
+                        console.info('Bye.');
+                        console.info('Bye.');
+                        // }, 10000);
+                    }
+                    // die();
+                    try {
+                        // Lets just close VSC, hopefully that'll be sufficient (more graceful).
+                        const vscode = require('vscode');
+                        console.log('Close VSC');
+                        vscode.commands.executeCommand('workbench.action.closeWindow');
+                        console.log('Bye from VSC');
+                        die();
+                    } catch (ex) {
+                        // Worse case scenario, just kill the process.
+                        console.error(ex);
+                    }
                 }
-                // die();
-                try {
-                    // Lets just close VSC, hopefully that'll be sufficient (more graceful).
-                    const vscode = require('vscode');
-                    console.log('Close VSC');
-                    vscode.commands.executeCommand('workbench.action.closeWindow');
-                    console.log('Bye from VSC');
-                    die();
-                } catch (ex) {
-                    // Worse case scenario, just kill the process.
-                    console.error(ex);
-                }
+                setTimeout(something, 5000);
             });
     }
 }
