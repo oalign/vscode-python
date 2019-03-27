@@ -24,6 +24,8 @@ class ExitReporter {
             })
             .once(EVENT_RUN_END, () => {
                 console.info('End from custom PVSC Mocha Reporter');
+                console.info('End from custom PVSC Mocha Reporter');
+                console.info('End from custom PVSC Mocha Reporter');
                 function dump() {
                     console.info('wft()');
                     WTF.dump();
