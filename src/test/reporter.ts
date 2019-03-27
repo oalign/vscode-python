@@ -23,6 +23,7 @@ class ExitReporter {
                 console.info('Start form custom PVSC Mocha Reporter.');
             })
             .once(EVENT_RUN_END, () => {
+                console.info('End from custom PVSC Mocha Reporter');
                 function dump() {
                     console.info('wft()');
                     WTF.dump();
